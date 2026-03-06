@@ -1,0 +1,38 @@
+# Build
+build/
+*.iml
+.gradle/
+local.properties
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Android
+android/app/build/
+android/core/build/
+android/auto/build/
+android/shared-test/build/
+*.apk
+*.aab
+
+# Backend
+backend/build/
+backend/*.jar
+
+# Environment
+.env
+.env.local
+*.env
+
+# Secrets
+*.jks
+*.keystore
+credentials.json
+google-services.json

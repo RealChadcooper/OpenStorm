@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OpenStorm</string>
+    <string name="radar_screen_title">Radar</string>
+    <string name="alerts_screen_title">Alerts</string>
+    <string name="stations_screen_title">Stations</string>
+    <string name="settings_screen_title">Settings</string>
+    <string name="no_alerts">No active alerts in your area</string>
+    <string name="loading">Loading…</string>
+    <string name="error_generic">Something went wrong. Pull to retry.</string>
+    <string name="last_updated">Last updated %1$s</string>
+    <string name="data_attribution">Data: NOAA/NWS</string>
+</resources>
