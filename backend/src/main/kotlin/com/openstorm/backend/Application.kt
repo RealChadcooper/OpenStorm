@@ -96,7 +96,18 @@ fun Application.configureRouting(config: AppConfig) {
 }
 
 fun Application.configureIngestion(config: AppConfig) {
-    val radarWorker = RadarIngestionWorker()
+    val httpClient = io.ktor.client.HttpClient(io.ktor.client.engine.cio.CIO) {
+        install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
+            jackson {
+                registerModule(JavaTimeModule())
+            }
+        }
+        engine {
+            requestTimeout = 30_000
+        }
+    }
+
+    val radarWorker = RadarIngestionWorker(config, httpClient)
     val alertWorker = AlertIngestionWorker()
 
     launch {

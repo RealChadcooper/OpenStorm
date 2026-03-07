@@ -54,6 +54,9 @@ dependencies {
     // JSON
     implementation(libs.moshi)
 
+    // AWS S3 (object storage for radar tiles)
+    implementation(libs.aws.s3)
+
     // Testing
     testImplementation(libs.ktor.server.test)
     testImplementation(libs.kotlin.test)

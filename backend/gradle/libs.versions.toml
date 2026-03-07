@@ -7,6 +7,7 @@ hikari = "6.2.1"
 postgres = "42.7.4"
 redis = "5.2.0"
 moshi = "1.15.1"
+aws = "2.29.26"
 
 [libraries]
 ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
@@ -35,6 +36,10 @@ postgres = { module = "org.postgresql:postgresql", version.ref = "postgres" }
 redis = { module = "redis.clients:jedis", version.ref = "redis" }
 
 moshi = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshi" }
+
+# AWS S3
+aws-s3 = { module = "software.amazon.awssdk:s3", version.ref = "aws" }
+aws-s3-transfer = { module = "software.amazon.awssdk:s3-transfer-manager", version.ref = "aws" }
 
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 
