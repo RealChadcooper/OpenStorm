@@ -8,6 +8,7 @@ import com.openstorm.backend.provider.alert.NwsAlertProvider
 import com.openstorm.backend.provider.radar.NoaaRadarProvider
 import com.openstorm.backend.routes.alertRoutes
 import com.openstorm.backend.routes.archiveRoutes
+import com.openstorm.backend.routes.devTileProxyRoutes
 import com.openstorm.backend.routes.healthRoutes
 import com.openstorm.backend.routes.radarRoutes
 import com.openstorm.backend.service.AlertService
@@ -36,9 +37,17 @@ private val logger = LoggerFactory.getLogger("OpenStorm")
 fun main() {
     val config = AppConfig.load()
 
+    if (config.devMode) {
+        logger.info("╔══════════════════════════════════════════╗")
+        logger.info("║  OpenStorm DEV MODE — no DB/S3 required  ║")
+        logger.info("╚══════════════════════════════════════════╝")
+    }
+
     embeddedServer(Netty, port = config.port, host = "0.0.0.0") {
         configurePlugins()
-        configureDatabase(config)
+        if (!config.devMode) {
+            configureDatabase(config)
+        }
         configureRouting(config)
         configureIngestion(config)
     }.start(wait = true)
@@ -84,7 +93,7 @@ fun Application.configurePlugins() {
 }
 
 fun Application.configureRouting(config: AppConfig) {
-    val radarProvider = NoaaRadarProvider()
+    val radarProvider = NoaaRadarProvider(devMode = config.devMode, localBaseUrl = "http://localhost:${config.port}")
     val alertProvider = NwsAlertProvider()
     val radarService = RadarService(radarProvider)
     val alertService = AlertService(alertProvider)
@@ -94,10 +103,18 @@ fun Application.configureRouting(config: AppConfig) {
         radarRoutes(radarService)
         archiveRoutes(radarService)
         alertRoutes(alertService)
+        if (config.devMode) {
+            devTileProxyRoutes()
+        }
     }
 }
 
 fun Application.configureIngestion(config: AppConfig) {
+    if (config.devMode) {
+        logger.info("DEV_MODE enabled — skipping ingestion workers (no DB/S3 required)")
+        return
+    }
+
     val httpClient = io.ktor.client.HttpClient(io.ktor.client.engine.cio.CIO) {
         install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
             jackson {

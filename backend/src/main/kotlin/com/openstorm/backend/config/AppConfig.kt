@@ -2,6 +2,7 @@ package com.openstorm.backend.config
 
 data class AppConfig(
     val port: Int,
+    val devMode: Boolean,
     val databaseUrl: String,
     val databaseUser: String,
     val databasePassword: String,
@@ -23,6 +24,7 @@ data class AppConfig(
     companion object {
         fun load() = AppConfig(
             port = env("PORT", "8080").toInt(),
+            devMode = env("DEV_MODE", "false").toBoolean(),
             databaseUrl = env("DATABASE_URL", "jdbc:postgresql://localhost:5432/openstorm"),
             databaseUser = env("DATABASE_USER", "openstorm"),
             databasePassword = env("DATABASE_PASSWORD", "openstorm"),

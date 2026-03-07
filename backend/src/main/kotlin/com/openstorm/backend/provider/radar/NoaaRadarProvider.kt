@@ -18,7 +18,10 @@ import java.time.temporal.ChronoUnit
  *
  * For MVP, returns structured metadata pointing to tile URLs.
  */
-class NoaaRadarProvider : RadarProvider {
+class NoaaRadarProvider(
+    private val devMode: Boolean = false,
+    private val localBaseUrl: String = "http://localhost:8080",
+) : RadarProvider {
 
     override val providerId = "noaa-nexrad"
 
@@ -149,8 +152,23 @@ class NoaaRadarProvider : RadarProvider {
 
     override suspend fun getFrames(stationId: String, product: String, count: Int): List<RadarFrame> {
         val now = Instant.now()
-        // Generate placeholder frame metadata
-        // In production: query actual tiles from object storage
+
+        if (devMode) {
+            // In dev mode, all frames point to the local tile proxy which serves
+            // live IEM NEXRAD mosaic tiles. The product controls which layer (N0Q/N0U).
+            val productLower = product.lowercase()
+            val tileUrl = "$localBaseUrl/api/v1/dev/tiles/$productLower/{z}/{x}/{y}.png"
+            return (0 until count).reversed().map { i ->
+                val timestamp = now.minus((i * 5).toLong(), ChronoUnit.MINUTES)
+                RadarFrame(
+                    timestamp = timestamp,
+                    tileUrl = tileUrl,
+                    expiresAt = timestamp.plus(10, ChronoUnit.MINUTES),
+                )
+            }
+        }
+
+        // Production: query actual tiles from object storage
         return (0 until count).reversed().map { i ->
             val timestamp = now.minus((i * 5).toLong(), ChronoUnit.MINUTES)
             RadarFrame(
