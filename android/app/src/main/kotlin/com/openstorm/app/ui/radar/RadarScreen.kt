@@ -62,6 +62,7 @@ import com.openstorm.app.ui.map.AlertOverlayController
 import com.openstorm.app.ui.map.CameraState
 import com.openstorm.app.ui.map.OpenStormMapView
 import com.openstorm.app.ui.map.RadarOverlayController
+import com.openstorm.app.ui.map.SpcOverlayController
 import com.openstorm.app.ui.map.StationMarkerController
 import com.openstorm.core.domain.model.RadarProduct
 import org.maplibre.android.maps.MapLibreMap
@@ -77,6 +78,7 @@ fun RadarScreen(
     // Controllers survive recompositions but not lifecycle destruction
     val radarOverlay = remember { RadarOverlayController() }
     val alertOverlay = remember { AlertOverlayController() }
+    val spcOverlay = remember { SpcOverlayController() }
     val stationMarkers = remember { StationMarkerController() }
     var mapInstance by remember { mutableStateOf<MapLibreMap?>(null) }
 
@@ -149,6 +151,19 @@ fun RadarScreen(
         stationMarkers.updateActiveStation(style, uiState.station)
     }
 
+    // React to SPC overlay changes
+    LaunchedEffect(uiState.spcOutlook, uiState.spcWatches, uiState.showSpcOverlay) {
+        val map = mapInstance ?: return@LaunchedEffect
+        val style = map.style ?: return@LaunchedEffect
+        if (uiState.showSpcOverlay) {
+            spcOverlay.updateOutlook(style, uiState.spcOutlook)
+            spcOverlay.updateWatches(style, uiState.spcWatches)
+        } else {
+            spcOverlay.updateOutlook(style, null)
+            spcOverlay.updateWatches(style, emptyList())
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         // ── Map fills the entire screen ──
         OpenStormMapView(
@@ -160,6 +175,7 @@ fun RadarScreen(
                 val style = map.style ?: return@OpenStormMapView
                 radarOverlay.initialize(map, style)
                 alertOverlay.initialize(style)
+                spcOverlay.initialize(style)
                 stationMarkers.initialize(style)
 
                 // If we already have data, apply it immediately
@@ -168,6 +184,10 @@ fun RadarScreen(
                 stationMarkers.updateActiveStation(style, uiState.station)
                 if (uiState.showAlertOverlay) {
                     alertOverlay.updateAlerts(style, uiState.alerts)
+                }
+                if (uiState.showSpcOverlay) {
+                    spcOverlay.updateOutlook(style, uiState.spcOutlook)
+                    spcOverlay.updateWatches(style, uiState.spcWatches)
                 }
             },
             onCameraIdle = viewModel::onCameraIdle,
@@ -304,6 +324,14 @@ fun RadarScreen(
                 contentDescription = "Toggle alerts",
                 isActive = uiState.showAlertOverlay,
                 onClick = viewModel::toggleAlertOverlay,
+            )
+
+            // SPC overlay toggle
+            MapActionButton(
+                icon = Icons.Default.Layers,
+                contentDescription = "Toggle SPC outlooks",
+                isActive = uiState.showSpcOverlay,
+                onClick = viewModel::toggleSpcOverlay,
             )
 
             // Recenter on device location

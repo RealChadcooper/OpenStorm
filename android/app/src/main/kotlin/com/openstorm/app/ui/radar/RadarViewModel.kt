@@ -8,9 +8,12 @@ import com.openstorm.core.domain.model.Alert
 import com.openstorm.core.domain.model.RadarFrame
 import com.openstorm.core.domain.model.RadarProduct
 import com.openstorm.core.domain.model.RadarStation
+import com.openstorm.core.domain.model.SpcOutlook
+import com.openstorm.core.domain.model.SpcWatch
 import com.openstorm.core.domain.repository.AlertRepository
 import com.openstorm.core.domain.repository.PreferencesRepository
 import com.openstorm.core.domain.repository.RadarRepository
+import com.openstorm.core.domain.repository.SpcRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -52,6 +55,9 @@ data class RadarUiState(
     val alerts: List<Alert> = emptyList(),
     val showAlertOverlay: Boolean = true,
     val showStationMarkers: Boolean = true,
+    val spcOutlook: SpcOutlook? = null,
+    val spcWatches: List<SpcWatch> = emptyList(),
+    val showSpcOverlay: Boolean = true,
     /** The tile URL template for the currently displayed frame. */
     val currentTileUrl: String? = null,
     /** Whether we've already initialized with a location. */
@@ -63,6 +69,7 @@ data class RadarUiState(
 class RadarViewModel @Inject constructor(
     private val radarRepository: RadarRepository,
     private val alertRepository: AlertRepository,
+    private val spcRepository: SpcRepository,
     private val preferencesRepository: PreferencesRepository,
     private val locationProvider: LocationProvider,
 ) : ViewModel() {
@@ -165,6 +172,17 @@ class RadarViewModel @Inject constructor(
                 // Alerts are non-critical; silently continue
             }
         }
+
+        // Load SPC outlooks and watches
+        viewModelScope.launch {
+            try {
+                val outlook = spcRepository.getOutlook(1)
+                val watches = spcRepository.getActiveWatches()
+                _uiState.update { it.copy(spcOutlook = outlook, spcWatches = watches) }
+            } catch (_: Exception) {
+                // SPC data is non-critical
+            }
+        }
     }
 
     fun selectStation(stationId: String) {
@@ -213,6 +231,10 @@ class RadarViewModel @Inject constructor(
 
     fun toggleAlertOverlay() {
         _uiState.update { it.copy(showAlertOverlay = !it.showAlertOverlay) }
+    }
+
+    fun toggleSpcOverlay() {
+        _uiState.update { it.copy(showSpcOverlay = !it.showSpcOverlay) }
     }
 
     fun onCameraIdle(camera: CameraState) {

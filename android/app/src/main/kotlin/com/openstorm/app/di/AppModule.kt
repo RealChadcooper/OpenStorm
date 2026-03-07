@@ -14,9 +14,11 @@ import com.openstorm.core.data.remote.OpenStormApi
 import com.openstorm.core.data.repository.AlertRepositoryImpl
 import com.openstorm.core.data.repository.PreferencesRepositoryImpl
 import com.openstorm.core.data.repository.RadarRepositoryImpl
+import com.openstorm.core.data.repository.SpcRepositoryImpl
 import com.openstorm.core.domain.repository.AlertRepository
 import com.openstorm.core.domain.repository.PreferencesRepository
 import com.openstorm.core.domain.repository.RadarRepository
+import com.openstorm.core.domain.repository.SpcRepository
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.Binds
@@ -105,4 +107,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindPreferencesRepository(impl: PreferencesRepositoryImpl): PreferencesRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSpcRepository(impl: SpcRepositoryImpl): SpcRepository
 }
