@@ -53,3 +53,34 @@ data class HealthResponse(
     val version: String = "1.0.0",
     val uptime: Long,
 )
+
+// ── Archive / Playback API models ──
+
+data class RadarFrameSummary(
+    val timestamp: Instant,
+    val tileUrl: String,
+)
+
+data class RadarPlaybackManifest(
+    val station: String,
+    val product: String,
+    val frames: List<RadarFrameSummary>,
+    val startTime: Instant,
+    val endTime: Instant,
+    val frameCount: Int,
+    /** Current retention window in hours. Frames older than this are deleted. */
+    val retentionHours: Int,
+)
+
+data class ArchiveFramesResponse(
+    val station: String,
+    val product: String,
+    val frames: List<RadarFrameSummary>,
+    val totalAvailable: Int,
+)
+
+data class NearestFrameResponse(
+    val station: String,
+    val product: String,
+    val frame: RadarFrameSummary?,
+)

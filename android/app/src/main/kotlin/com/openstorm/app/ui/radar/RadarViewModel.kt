@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.openstorm.app.location.LocationProvider
 import com.openstorm.app.ui.map.CameraState
 import com.openstorm.core.domain.model.Alert
+import com.openstorm.core.domain.model.ArchiveQuery
 import com.openstorm.core.domain.model.RadarFrame
+import com.openstorm.core.domain.model.RadarFrameSummary
 import com.openstorm.core.domain.model.RadarProduct
 import com.openstorm.core.domain.model.RadarStation
 import com.openstorm.core.domain.model.SpcOutlook
@@ -14,6 +16,8 @@ import com.openstorm.core.domain.repository.AlertRepository
 import com.openstorm.core.domain.repository.PreferencesRepository
 import com.openstorm.core.domain.repository.RadarRepository
 import com.openstorm.core.domain.repository.SpcRepository
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -25,6 +29,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
+
+/** Whether the radar screen is showing live data or archive playback. */
+enum class RadarMode {
+    LIVE,
+    ARCHIVE,
+}
 
 /** Permission state communicated from the UI layer. */
 enum class LocationPermissionState {
@@ -63,6 +73,12 @@ data class RadarUiState(
     /** Whether we've already initialized with a location. */
     val locationInitialized: Boolean = false,
     val locationPermission: LocationPermissionState = LocationPermissionState.UNKNOWN,
+    /** Live vs archive mode */
+    val radarMode: RadarMode = RadarMode.LIVE,
+    /** Archive-mode frames (separate from live frames) */
+    val archiveFrames: List<RadarFrameSummary> = emptyList(),
+    val archiveFrameIndex: Int = 0,
+    val archiveIsPlaying: Boolean = false,
 )
 
 @HiltViewModel
@@ -242,8 +258,111 @@ class RadarViewModel @Inject constructor(
     }
 
     fun refresh() {
+        val state = _uiState.value
+        if (state.radarMode == RadarMode.ARCHIVE) {
+            loadArchiveFrames()
+            return
+        }
+        val stationId = state.station?.id ?: return
+        loadFrames(stationId)
+    }
+
+    // ── Archive mode ──
+
+    fun switchToArchiveMode(hoursBack: Int = 2) {
+        stopLoop()
+        val now = Instant.now()
+        _uiState.update {
+            it.copy(radarMode = RadarMode.ARCHIVE)
+        }
+        loadArchiveFrames(now.minus(hoursBack.toLong(), ChronoUnit.HOURS), now)
+    }
+
+    fun switchToLiveMode() {
+        stopArchivePlayback()
+        _uiState.update {
+            it.copy(
+                radarMode = RadarMode.LIVE,
+                archiveFrames = emptyList(),
+                archiveFrameIndex = 0,
+                archiveIsPlaying = false,
+            )
+        }
+        // Reload live frames
         val stationId = _uiState.value.station?.id ?: return
         loadFrames(stationId)
+    }
+
+    private fun loadArchiveFrames(
+        start: Instant = Instant.now().minus(2, ChronoUnit.HOURS),
+        end: Instant = Instant.now(),
+    ) {
+        val stationId = _uiState.value.station?.id ?: return
+        val product = _uiState.value.selectedProduct.code
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            try {
+                val query = ArchiveQuery(stationId, product, start, end)
+                val frames = radarRepository.getArchiveFrames(query)
+                val lastIdx = (frames.size - 1).coerceAtLeast(0)
+                _uiState.update {
+                    it.copy(
+                        archiveFrames = frames,
+                        archiveFrameIndex = lastIdx,
+                        currentTileUrl = frames.getOrNull(lastIdx)?.tileUrl,
+                        isLoading = false,
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(isLoading = false, error = e.message ?: "Failed to load archive")
+                }
+            }
+        }
+    }
+
+    fun seekArchiveFrame(index: Int) {
+        val frames = _uiState.value.archiveFrames
+        val clamped = index.coerceIn(0, (frames.size - 1).coerceAtLeast(0))
+        _uiState.update {
+            it.copy(
+                archiveFrameIndex = clamped,
+                currentTileUrl = frames.getOrNull(clamped)?.tileUrl,
+            )
+        }
+    }
+
+    fun toggleArchivePlayback() {
+        if (_uiState.value.archiveIsPlaying) stopArchivePlayback() else startArchivePlayback()
+    }
+
+    private var archivePlaybackJob: Job? = null
+
+    private fun startArchivePlayback() {
+        _uiState.update { it.copy(archiveIsPlaying = true) }
+        archivePlaybackJob = viewModelScope.launch {
+            while (true) {
+                val state = _uiState.value
+                if (state.archiveFrames.isEmpty()) break
+                val nextIndex = (state.archiveFrameIndex + 1) % state.archiveFrames.size
+                val frame = state.archiveFrames[nextIndex]
+                _uiState.update {
+                    it.copy(
+                        archiveFrameIndex = nextIndex,
+                        currentTileUrl = frame.tileUrl,
+                    )
+                }
+                val delayMs = if (nextIndex == state.archiveFrames.size - 1) 800L else 200L
+                delay(delayMs)
+            }
+        }
+    }
+
+    private fun stopArchivePlayback() {
+        archivePlaybackJob?.cancel()
+        archivePlaybackJob = null
+        _uiState.update { it.copy(archiveIsPlaying = false) }
     }
 
     private fun loadFrames(stationId: String) {
@@ -305,5 +424,6 @@ class RadarViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         loopJob?.cancel()
+        archivePlaybackJob?.cancel()
     }
 }

@@ -3,7 +3,10 @@ package com.openstorm.core.data.repository
 import com.openstorm.core.data.local.dao.RadarStationDao
 import com.openstorm.core.data.local.entity.RadarStationEntity
 import com.openstorm.core.data.remote.OpenStormApi
+import com.openstorm.core.domain.model.ArchiveQuery
 import com.openstorm.core.domain.model.RadarFrame
+import com.openstorm.core.domain.model.RadarFrameSummary
+import com.openstorm.core.domain.model.RadarPlaybackManifest
 import com.openstorm.core.domain.model.RadarStation
 import com.openstorm.core.domain.repository.RadarRepository
 import kotlinx.coroutines.flow.Flow
@@ -85,6 +88,76 @@ class RadarRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Timber.e(e, "Failed to get products for $stationId")
             emptyList()
+        }
+    }
+
+    // ── Archive ──
+
+    override suspend fun getArchiveFrames(query: ArchiveQuery): List<RadarFrameSummary> {
+        return try {
+            val response = api.getArchiveFrames(
+                stationId = query.stationId,
+                product = query.product,
+                start = query.start.toString(),
+                end = query.end.toString(),
+                limit = query.limit,
+            )
+            response.frames.map { dto ->
+                RadarFrameSummary(
+                    timestamp = Instant.parse(dto.timestamp),
+                    tileUrl = dto.tileUrl,
+                )
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to fetch archive frames")
+            emptyList()
+        }
+    }
+
+    override suspend fun getNearestFrame(
+        stationId: String,
+        product: String,
+        target: Instant,
+    ): RadarFrameSummary? {
+        return try {
+            val response = api.getNearestFrame(stationId, product, target.toString())
+            response.frame?.let {
+                RadarFrameSummary(
+                    timestamp = Instant.parse(it.timestamp),
+                    tileUrl = it.tileUrl,
+                )
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to fetch nearest frame")
+            null
+        }
+    }
+
+    override suspend fun getPlaybackManifest(query: ArchiveQuery): RadarPlaybackManifest? {
+        return try {
+            val dto = api.getPlaybackManifest(
+                stationId = query.stationId,
+                product = query.product,
+                start = query.start.toString(),
+                end = query.end.toString(),
+            )
+            RadarPlaybackManifest(
+                station = dto.station,
+                product = dto.product,
+                frames = dto.frames.map { f ->
+                    RadarFrameSummary(
+                        timestamp = Instant.parse(f.timestamp),
+                        tileUrl = f.tileUrl,
+                    )
+                },
+                startTime = Instant.parse(dto.startTime),
+                endTime = Instant.parse(dto.endTime),
+                frameCount = dto.frameCount,
+                retentionHours = dto.retentionHours,
+            )
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to fetch playback manifest")
+            null
         }
     }
 

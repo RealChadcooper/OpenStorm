@@ -65,6 +65,8 @@ import com.openstorm.app.ui.map.RadarOverlayController
 import com.openstorm.app.ui.map.SpcOverlayController
 import com.openstorm.app.ui.map.StationMarkerController
 import com.openstorm.core.domain.model.RadarProduct
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.LiveTv
 import org.maplibre.android.maps.MapLibreMap
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -348,11 +350,27 @@ fun RadarScreen(
                     }
                 },
             )
+
+            // Archive mode toggle
+            MapActionButton(
+                icon = if (uiState.radarMode == RadarMode.ARCHIVE)
+                    Icons.Default.LiveTv else Icons.Default.History,
+                contentDescription = if (uiState.radarMode == RadarMode.ARCHIVE)
+                    "Switch to live" else "Browse archive",
+                isActive = uiState.radarMode == RadarMode.ARCHIVE,
+                onClick = {
+                    if (uiState.radarMode == RadarMode.ARCHIVE) {
+                        viewModel.switchToLiveMode()
+                    } else {
+                        viewModel.switchToArchiveMode()
+                    }
+                },
+            )
         }
 
         // ── Bottom: playback controls ──
         AnimatedVisibility(
-            visible = uiState.frames.isNotEmpty(),
+            visible = uiState.radarMode == RadarMode.LIVE && uiState.frames.isNotEmpty(),
             enter = slideInVertically { it } + fadeIn(),
             exit = slideOutVertically { it } + fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -377,6 +395,72 @@ fun RadarScreen(
             )
         }
 
+        // ── Bottom: archive playback controls ──
+        AnimatedVisibility(
+            visible = uiState.radarMode == RadarMode.ARCHIVE && uiState.archiveFrames.isNotEmpty(),
+            enter = slideInVertically { it } + fadeIn(),
+            exit = slideOutVertically { it } + fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
+            ArchivePlaybackBar(
+                frameCount = uiState.archiveFrames.size,
+                currentFrame = uiState.archiveFrameIndex,
+                isPlaying = uiState.archiveIsPlaying,
+                onTogglePlayback = viewModel::toggleArchivePlayback,
+                onSeek = viewModel::seekArchiveFrame,
+                frameTimestamp = uiState.archiveFrames.getOrNull(uiState.archiveFrameIndex)
+                    ?.timestamp?.toString()
+                    ?.substringAfter("T")
+                    ?.substringBefore(".")
+                    ?.let { "${it}Z" } ?: "",
+                onBackToLive = viewModel::switchToLiveMode,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            )
+        }
+
+        // ── Archive mode banner ──
+        AnimatedVisibility(
+            visible = uiState.radarMode == RadarMode.ARCHIVE,
+            enter = slideInVertically { -it } + fadeIn(),
+            exit = slideOutVertically { -it } + fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f))
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.History,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.tertiary,
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Archive Mode",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(
+                    onClick = viewModel::switchToLiveMode,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.tertiary,
+                    ),
+                ) {
+                    Text("Back to Live", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+
         // ── Data attribution (bottom-left, above MapLibre logo) ──
         Text(
             text = "Data: NOAA/NWS",
@@ -386,6 +470,99 @@ fun RadarScreen(
                 .align(Alignment.BottomStart)
                 .padding(start = 8.dp, bottom = 100.dp),
         )
+    }
+}
+
+@Composable
+private fun ArchivePlaybackBar(
+    frameCount: Int,
+    currentFrame: Int,
+    isPlaying: Boolean,
+    onTogglePlayback: () -> Unit,
+    onSeek: (Int) -> Unit,
+    frameTimestamp: String,
+    onBackToLive: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+    ) {
+        // Frame scrubber
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            IconButton(
+                onClick = onTogglePlayback,
+                modifier = Modifier.size(40.dp),
+            ) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+
+            if (frameCount > 1) {
+                Slider(
+                    value = currentFrame.toFloat(),
+                    onValueChange = { onSeek(it.toInt()) },
+                    valueRange = 0f..(frameCount - 1).toFloat(),
+                    steps = (frameCount - 2).coerceAtLeast(0),
+                    modifier = Modifier.weight(1f),
+                    colors = SliderDefaults.colors(
+                        thumbColor = MaterialTheme.colorScheme.tertiary,
+                        activeTrackColor = MaterialTheme.colorScheme.tertiary,
+                        inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                    ),
+                )
+            }
+
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = frameTimestamp,
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+
+        // Info row
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(
+                imageVector = Icons.Default.History,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.outline,
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "Archive  ·  Frame ${currentFrame + 1}/$frameCount",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(
+                onClick = onBackToLive,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary,
+                ),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.LiveTv,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Live", style = MaterialTheme.typography.labelSmall)
+            }
+        }
     }
 }
 

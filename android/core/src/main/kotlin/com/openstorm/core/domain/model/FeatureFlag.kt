@@ -16,7 +16,7 @@ enum class FeatureFlag(val key: String, val defaultEnabled: Boolean) {
     SATELLITE_GOES("satellite_goes", false),
     SOUNDING("sounding", false),
     LIGHTNING("lightning", false),
-    ARCHIVE_PLAYBACK("archive_playback", false),
+    ARCHIVE_PLAYBACK("archive_playback", true),
     NATIONAL_MOSAIC("national_mosaic", false),
     ROUTE_WEATHER("route_weather", false),
     DUAL_PANE("dual_pane", false),

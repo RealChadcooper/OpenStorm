@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CellTower
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Settings
@@ -28,6 +29,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.openstorm.app.ui.alerts.AlertsScreen
+import com.openstorm.app.ui.archive.ArchiveScreen
 import com.openstorm.app.ui.radar.RadarScreen
 import com.openstorm.app.ui.settings.SettingsScreen
 import com.openstorm.app.ui.spc.SpcScreen
@@ -37,7 +39,7 @@ enum class Screen(val route: String, val label: String, val icon: ImageVector) {
     Radar("radar", "Radar", Icons.Default.Map),
     Alerts("alerts", "Alerts", Icons.Default.NotificationsActive),
     Spc("spc", "SPC", Icons.Default.Shield),
-    Stations("stations", "Stations", Icons.Default.CellTower),
+    Archive("archive", "Archive", Icons.Default.History),
     Settings("settings", "Settings", Icons.Default.Settings),
 }
 
@@ -96,9 +98,9 @@ fun OpenStormNavHost() {
                     SpcScreen()
                 }
             }
-            composable(Screen.Stations.route) {
+            composable(Screen.Archive.route) {
                 Box(modifier = Modifier.padding(innerPadding)) {
-                    StationsScreen()
+                    ArchiveScreen()
                 }
             }
             composable(Screen.Settings.route) {

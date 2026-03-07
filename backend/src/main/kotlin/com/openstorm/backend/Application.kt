@@ -7,6 +7,7 @@ import com.openstorm.backend.ingestion.AlertIngestionWorker
 import com.openstorm.backend.provider.alert.NwsAlertProvider
 import com.openstorm.backend.provider.radar.NoaaRadarProvider
 import com.openstorm.backend.routes.alertRoutes
+import com.openstorm.backend.routes.archiveRoutes
 import com.openstorm.backend.routes.healthRoutes
 import com.openstorm.backend.routes.radarRoutes
 import com.openstorm.backend.service.AlertService
@@ -91,6 +92,7 @@ fun Application.configureRouting(config: AppConfig) {
     routing {
         healthRoutes()
         radarRoutes(radarService)
+        archiveRoutes(radarService)
         alertRoutes(alertService)
     }
 }

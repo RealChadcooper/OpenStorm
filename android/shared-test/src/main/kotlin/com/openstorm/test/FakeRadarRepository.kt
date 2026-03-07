@@ -1,6 +1,9 @@
 package com.openstorm.test
 
+import com.openstorm.core.domain.model.ArchiveQuery
 import com.openstorm.core.domain.model.RadarFrame
+import com.openstorm.core.domain.model.RadarFrameSummary
+import com.openstorm.core.domain.model.RadarPlaybackManifest
 import com.openstorm.core.domain.model.RadarProduct
 import com.openstorm.core.domain.model.RadarStation
 import com.openstorm.core.domain.model.StationStatus
@@ -10,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import kotlin.math.abs
 
 class FakeRadarRepository : RadarRepository {
 
@@ -62,5 +66,52 @@ class FakeRadarRepository : RadarRepository {
 
     override suspend fun getAvailableProducts(stationId: String): List<String> {
         return listOf("N0Q", "N0U")
+    }
+
+    override suspend fun getArchiveFrames(query: ArchiveQuery): List<RadarFrameSummary> {
+        return generateArchiveFrames(query.stationId, query.product, query.start, query.end)
+    }
+
+    override suspend fun getNearestFrame(
+        stationId: String,
+        product: String,
+        target: Instant,
+    ): RadarFrameSummary? {
+        val frames = generateArchiveFrames(stationId, product, target.minus(30, ChronoUnit.MINUTES), target.plus(30, ChronoUnit.MINUTES))
+        return frames.minByOrNull { abs(it.timestamp.epochSecond - target.epochSecond) }
+    }
+
+    override suspend fun getPlaybackManifest(query: ArchiveQuery): RadarPlaybackManifest {
+        val frames = generateArchiveFrames(query.stationId, query.product, query.start, query.end)
+        return RadarPlaybackManifest(
+            station = query.stationId,
+            product = query.product,
+            frames = frames,
+            startTime = frames.firstOrNull()?.timestamp ?: query.start,
+            endTime = frames.lastOrNull()?.timestamp ?: query.end,
+            frameCount = frames.size,
+            retentionHours = 24,
+        )
+    }
+
+    private fun generateArchiveFrames(
+        stationId: String,
+        product: String,
+        start: Instant,
+        end: Instant,
+    ): List<RadarFrameSummary> {
+        val intervalMinutes = 5L
+        val frames = mutableListOf<RadarFrameSummary>()
+        var t = start
+        while (t <= end && frames.size < 200) {
+            frames.add(
+                RadarFrameSummary(
+                    timestamp = t,
+                    tileUrl = "https://test.openstorm.app/tiles/$stationId/$product/${t}/{z}/{x}/{y}.webp",
+                )
+            )
+            t = t.plus(intervalMinutes, ChronoUnit.MINUTES)
+        }
+        return frames
     }
 }

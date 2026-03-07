@@ -1,7 +1,10 @@
 package com.openstorm.core.data.remote
 
 import com.openstorm.core.data.remote.dto.AlertListResponse
+import com.openstorm.core.data.remote.dto.ArchiveFramesResponseDto
 import com.openstorm.core.data.remote.dto.HealthResponse
+import com.openstorm.core.data.remote.dto.NearestFrameResponseDto
+import com.openstorm.core.data.remote.dto.PlaybackManifestDto
 import com.openstorm.core.data.remote.dto.RadarFramesResponse
 import com.openstorm.core.data.remote.dto.StationListResponse
 import retrofit2.http.GET
@@ -33,4 +36,30 @@ interface OpenStormApi {
         @Query("lon") lon: Double,
         @Query("radius") radiusKm: Double = 150.0,
     ): AlertListResponse
+
+    // ── Archive endpoints ──
+
+    @GET("api/v1/radar/archive/{stationId}/{product}/frames")
+    suspend fun getArchiveFrames(
+        @Path("stationId") stationId: String,
+        @Path("product") product: String,
+        @Query("start") start: String,
+        @Query("end") end: String,
+        @Query("limit") limit: Int = 200,
+    ): ArchiveFramesResponseDto
+
+    @GET("api/v1/radar/archive/{stationId}/{product}/nearest")
+    suspend fun getNearestFrame(
+        @Path("stationId") stationId: String,
+        @Path("product") product: String,
+        @Query("timestamp") timestamp: String,
+    ): NearestFrameResponseDto
+
+    @GET("api/v1/radar/archive/{stationId}/{product}/manifest")
+    suspend fun getPlaybackManifest(
+        @Path("stationId") stationId: String,
+        @Path("product") product: String,
+        @Query("start") start: String,
+        @Query("end") end: String,
+    ): PlaybackManifestDto
 }

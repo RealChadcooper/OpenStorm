@@ -68,3 +68,37 @@ data class GeometryDto(
     val type: String,
     val coordinates: List<List<List<Double>>>? = null,
 )
+
+// ── Archive DTOs ──
+
+@JsonClass(generateAdapter = true)
+data class FrameSummaryDto(
+    val timestamp: String,
+    val tileUrl: String,
+)
+
+@JsonClass(generateAdapter = true)
+data class ArchiveFramesResponseDto(
+    val station: String,
+    val product: String,
+    val frames: List<FrameSummaryDto>,
+    val totalAvailable: Int,
+)
+
+@JsonClass(generateAdapter = true)
+data class NearestFrameResponseDto(
+    val station: String,
+    val product: String,
+    val frame: FrameSummaryDto?,
+)
+
+@JsonClass(generateAdapter = true)
+data class PlaybackManifestDto(
+    val station: String,
+    val product: String,
+    val frames: List<FrameSummaryDto>,
+    val startTime: String,
+    val endTime: String,
+    val frameCount: Int,
+    val retentionHours: Int,
+)
