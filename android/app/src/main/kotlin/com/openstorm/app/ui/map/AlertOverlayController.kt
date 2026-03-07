@@ -1,8 +1,6 @@
 package com.openstorm.app.ui.map
 
 import com.openstorm.core.domain.model.Alert
-import com.openstorm.core.domain.model.AlertSeverity
-import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.FillLayer
