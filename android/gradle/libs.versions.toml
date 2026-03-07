@@ -18,6 +18,8 @@ navigation = "2.8.5"
 lifecycle = "2.8.7"
 coil = "2.7.0"
 timber = "5.0.1"
+play-services-location = "21.3.0"
+accompanist = "0.36.0"
 junit = "5.10.3"
 mockk = "1.13.13"
 turbine = "1.2.0"
@@ -78,6 +80,10 @@ workmanager = { module = "androidx.work:work-runtime-ktx", version.ref = "workma
 
 # DataStore
 datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+
+# Location
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "play-services-location" }
+accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanist" }
 
 # Misc
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }

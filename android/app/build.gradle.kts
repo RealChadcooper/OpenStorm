@@ -80,6 +80,10 @@ dependencies {
     // MapLibre
     implementation(libs.maplibre)
 
+    // Location
+    implementation(libs.play.services.location)
+    implementation(libs.accompanist.permissions)
+
     // Coil
     implementation(libs.coil.compose)
 

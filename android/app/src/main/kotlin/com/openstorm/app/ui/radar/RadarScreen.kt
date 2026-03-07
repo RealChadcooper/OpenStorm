@@ -1,5 +1,6 @@
 package com.openstorm.app.ui.radar
 
+import android.Manifest
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -22,21 +23,23 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,12 +49,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.accompanist.permissions.shouldShowRationale
 import com.openstorm.app.ui.map.AlertOverlayController
 import com.openstorm.app.ui.map.CameraState
 import com.openstorm.app.ui.map.OpenStormMapView
@@ -60,6 +66,7 @@ import com.openstorm.app.ui.map.StationMarkerController
 import com.openstorm.core.domain.model.RadarProduct
 import org.maplibre.android.maps.MapLibreMap
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun RadarScreen(
     viewModel: RadarViewModel = hiltViewModel(),
@@ -73,9 +80,40 @@ fun RadarScreen(
     val stationMarkers = remember { StationMarkerController() }
     var mapInstance by remember { mutableStateOf<MapLibreMap?>(null) }
 
-    // Load data on first composition
+    // ── Location permission handling ──
+    val locationPermissions = rememberMultiplePermissionsState(
+        listOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+        )
+    )
+
+    // On first composition: request permission if not yet determined
     LaunchedEffect(Unit) {
-        viewModel.loadNearestStation(35.22, -97.44)
+        if (!locationPermissions.allPermissionsGranted &&
+            !locationPermissions.permissions.any { it.status.shouldShowRationale }
+        ) {
+            locationPermissions.launchMultiplePermissionRequest()
+        }
+    }
+
+    // React to permission changes — tell the ViewModel
+    val anyGranted = locationPermissions.permissions.any { it.status.isGranted }
+    LaunchedEffect(anyGranted, locationPermissions.allPermissionsGranted) {
+        // Either fine or coarse is sufficient
+        val granted = locationPermissions.permissions.any { it.status.isGranted }
+        viewModel.onLocationPermissionResult(granted)
+    }
+
+    // If permission was denied without rationale shown, still initialize with defaults
+    LaunchedEffect(locationPermissions.shouldShowRationale) {
+        if (!uiState.locationInitialized &&
+            !locationPermissions.allPermissionsGranted &&
+            !locationPermissions.shouldShowRationale
+        ) {
+            // All permissions permanently denied — use fallback
+            viewModel.onLocationPermissionResult(false)
+        }
     }
 
     // React to frame changes — update radar overlay
@@ -182,6 +220,47 @@ fun RadarScreen(
             )
         }
 
+        // ── Location permission rationale ──
+        AnimatedVisibility(
+            visible = locationPermissions.shouldShowRationale &&
+                !locationPermissions.permissions.any { it.status.isGranted },
+            enter = slideInVertically { -it } + fadeIn(),
+            exit = slideOutVertically { -it } + fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f))
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.LocationOff,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.tertiary,
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Location access shows your nearest radar",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(
+                    onClick = { locationPermissions.launchMultiplePermissionRequest() },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.tertiary,
+                    ),
+                ) {
+                    Text("Enable", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+
         // ── Top bar: station info ──
         AnimatedVisibility(
             visible = uiState.station != null,
@@ -227,16 +306,17 @@ fun RadarScreen(
                 onClick = viewModel::toggleAlertOverlay,
             )
 
-            // Recenter button
+            // Recenter on device location
             MapActionButton(
-                icon = Icons.Default.MyLocation,
-                contentDescription = "Center on station",
+                icon = if (uiState.locationPermission == LocationPermissionState.GRANTED)
+                    Icons.Default.MyLocation else Icons.Default.LocationOff,
+                contentDescription = "Center on my location",
                 isActive = false,
                 onClick = {
-                    uiState.station?.let { station ->
-                        viewModel.onCameraIdle(
-                            CameraState(latitude = station.lat, longitude = station.lon, zoom = 7.0)
-                        )
+                    if (uiState.locationPermission == LocationPermissionState.GRANTED) {
+                        viewModel.recenterOnDeviceLocation()
+                    } else {
+                        locationPermissions.launchMultiplePermissionRequest()
                     }
                 },
             )

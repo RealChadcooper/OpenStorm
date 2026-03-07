@@ -2,6 +2,7 @@ package com.openstorm.app.ui.radar
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.openstorm.app.location.LocationProvider
 import com.openstorm.app.ui.map.CameraState
 import com.openstorm.core.domain.model.Alert
 import com.openstorm.core.domain.model.RadarFrame
@@ -19,7 +20,18 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
+
+/** Permission state communicated from the UI layer. */
+enum class LocationPermissionState {
+    /** Not yet determined — waiting for user response. */
+    UNKNOWN,
+    /** Permission granted — can use GPS. */
+    GRANTED,
+    /** Permission denied — use fallback location. */
+    DENIED,
+}
 
 data class RadarUiState(
     val station: RadarStation? = null,
@@ -32,8 +44,8 @@ data class RadarUiState(
     val error: String? = null,
     val lastUpdated: String? = null,
     val cameraState: CameraState = CameraState(
-        latitude = 39.0,
-        longitude = -98.0,
+        latitude = LocationProvider.DEFAULT_LAT,
+        longitude = LocationProvider.DEFAULT_LON,
         zoom = 4.0,
     ),
     val radarOpacity: Float = 0.75f,
@@ -42,6 +54,9 @@ data class RadarUiState(
     val showStationMarkers: Boolean = true,
     /** The tile URL template for the currently displayed frame. */
     val currentTileUrl: String? = null,
+    /** Whether we've already initialized with a location. */
+    val locationInitialized: Boolean = false,
+    val locationPermission: LocationPermissionState = LocationPermissionState.UNKNOWN,
 )
 
 @HiltViewModel
@@ -49,12 +64,62 @@ class RadarViewModel @Inject constructor(
     private val radarRepository: RadarRepository,
     private val alertRepository: AlertRepository,
     private val preferencesRepository: PreferencesRepository,
+    private val locationProvider: LocationProvider,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RadarUiState())
     val uiState: StateFlow<RadarUiState> = _uiState.asStateFlow()
 
     private var loopJob: Job? = null
+
+    /**
+     * Called by the UI when location permission status changes.
+     * Triggers location acquisition and nearest-station loading.
+     */
+    fun onLocationPermissionResult(granted: Boolean) {
+        val newState = if (granted) LocationPermissionState.GRANTED else LocationPermissionState.DENIED
+        _uiState.update { it.copy(locationPermission = newState) }
+
+        if (_uiState.value.locationInitialized) return
+
+        viewModelScope.launch {
+            val lat: Double
+            val lon: Double
+
+            if (granted) {
+                val location = locationProvider.getCurrentLocation()
+                if (location != null) {
+                    lat = location.latitude
+                    lon = location.longitude
+                    Timber.d("Using GPS location: $lat, $lon")
+                } else {
+                    lat = LocationProvider.DEFAULT_LAT
+                    lon = LocationProvider.DEFAULT_LON
+                    Timber.d("GPS returned null, using default location")
+                }
+            } else {
+                lat = LocationProvider.DEFAULT_LAT
+                lon = LocationProvider.DEFAULT_LON
+                Timber.d("Location denied, using default location")
+            }
+
+            _uiState.update { it.copy(locationInitialized = true) }
+            loadNearestStation(lat, lon)
+        }
+    }
+
+    /**
+     * Re-center on device location (e.g., "My Location" button).
+     * Requires permission to already be granted.
+     */
+    fun recenterOnDeviceLocation() {
+        if (_uiState.value.locationPermission != LocationPermissionState.GRANTED) return
+
+        viewModelScope.launch {
+            val location = locationProvider.getCurrentLocation() ?: return@launch
+            loadNearestStation(location.latitude, location.longitude)
+        }
+    }
 
     fun loadNearestStation(lat: Double, lon: Double) {
         viewModelScope.launch {
