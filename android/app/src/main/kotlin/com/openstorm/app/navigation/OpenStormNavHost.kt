@@ -1,5 +1,9 @@
 package com.openstorm.app.navigation
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Map
@@ -9,6 +13,7 @@ import androidx.compose.material.icons.filled.CellTower
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +43,7 @@ fun OpenStormNavHost() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+    val currentRoute = currentDestination?.route
 
     Scaffold(
         bottomBar = {
@@ -64,12 +70,34 @@ fun OpenStormNavHost() {
         NavHost(
             navController = navController,
             startDestination = Screen.Radar.route,
-            modifier = Modifier.padding(innerPadding),
+            // No animations to keep map smooth
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
         ) {
-            composable(Screen.Radar.route) { RadarScreen() }
-            composable(Screen.Alerts.route) { AlertsScreen() }
-            composable(Screen.Stations.route) { StationsScreen() }
-            composable(Screen.Settings.route) { SettingsScreen() }
+            // Radar screen renders EDGE-TO-EDGE (behind bottom nav bar).
+            // The map fills the entire screen; overlay controls handle their own padding.
+            composable(Screen.Radar.route) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    RadarScreen()
+                }
+            }
+
+            // Other screens respect the scaffold padding
+            composable(Screen.Alerts.route) {
+                Box(modifier = Modifier.padding(innerPadding)) {
+                    AlertsScreen()
+                }
+            }
+            composable(Screen.Stations.route) {
+                Box(modifier = Modifier.padding(innerPadding)) {
+                    StationsScreen()
+                }
+            }
+            composable(Screen.Settings.route) {
+                Box(modifier = Modifier.padding(innerPadding)) {
+                    SettingsScreen()
+                }
+            }
         }
     }
 }

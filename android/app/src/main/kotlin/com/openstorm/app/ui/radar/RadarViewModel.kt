@@ -2,9 +2,12 @@ package com.openstorm.app.ui.radar
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.openstorm.app.ui.map.CameraState
+import com.openstorm.core.domain.model.Alert
 import com.openstorm.core.domain.model.RadarFrame
 import com.openstorm.core.domain.model.RadarProduct
 import com.openstorm.core.domain.model.RadarStation
+import com.openstorm.core.domain.repository.AlertRepository
 import com.openstorm.core.domain.repository.PreferencesRepository
 import com.openstorm.core.domain.repository.RadarRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,11 +31,23 @@ data class RadarUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
     val lastUpdated: String? = null,
+    val cameraState: CameraState = CameraState(
+        latitude = 39.0,
+        longitude = -98.0,
+        zoom = 4.0,
+    ),
+    val radarOpacity: Float = 0.75f,
+    val alerts: List<Alert> = emptyList(),
+    val showAlertOverlay: Boolean = true,
+    val showStationMarkers: Boolean = true,
+    /** The tile URL template for the currently displayed frame. */
+    val currentTileUrl: String? = null,
 )
 
 @HiltViewModel
 class RadarViewModel @Inject constructor(
     private val radarRepository: RadarRepository,
+    private val alertRepository: AlertRepository,
     private val preferencesRepository: PreferencesRepository,
 ) : ViewModel() {
 
@@ -48,8 +63,23 @@ class RadarViewModel @Inject constructor(
                 radarRepository.refreshStations(lat, lon)
                 val stations = radarRepository.observeNearestStations(lat, lon).first()
                 val nearest = stations.firstOrNull()
-                _uiState.update { it.copy(nearbyStations = stations, station = nearest) }
+                _uiState.update {
+                    it.copy(
+                        nearbyStations = stations,
+                        station = nearest,
+                    )
+                }
                 if (nearest != null) {
+                    // Fly camera to station
+                    _uiState.update {
+                        it.copy(
+                            cameraState = CameraState(
+                                latitude = nearest.lat,
+                                longitude = nearest.lon,
+                                zoom = 7.0,
+                            ),
+                        )
+                    }
                     loadFrames(nearest.id)
                 } else {
                     _uiState.update { it.copy(isLoading = false, error = "No radar stations found nearby") }
@@ -58,13 +88,36 @@ class RadarViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false, error = e.message ?: "Failed to load stations") }
             }
         }
+
+        // Also load alerts for this area
+        viewModelScope.launch {
+            try {
+                alertRepository.refreshAlerts(lat, lon)
+                alertRepository.observeActiveAlerts(lat, lon).collect { alerts ->
+                    _uiState.update { it.copy(alerts = alerts) }
+                }
+            } catch (_: Exception) {
+                // Alerts are non-critical; silently continue
+            }
+        }
     }
 
     fun selectStation(stationId: String) {
         viewModelScope.launch {
             val station = radarRepository.getStation(stationId)
-            _uiState.update { it.copy(station = station) }
-            loadFrames(stationId)
+            _uiState.update {
+                it.copy(
+                    station = station,
+                    cameraState = if (station != null) {
+                        CameraState(latitude = station.lat, longitude = station.lon, zoom = 7.0)
+                    } else {
+                        it.cameraState
+                    },
+                )
+            }
+            if (station != null) {
+                loadFrames(stationId)
+            }
         }
     }
 
@@ -75,16 +128,30 @@ class RadarViewModel @Inject constructor(
     }
 
     fun toggleLoop() {
-        val current = _uiState.value
-        if (current.isLooping) {
-            stopLoop()
-        } else {
-            startLoop()
-        }
+        if (_uiState.value.isLooping) stopLoop() else startLoop()
     }
 
     fun seekToFrame(index: Int) {
-        _uiState.update { it.copy(currentFrameIndex = index.coerceIn(0, it.frames.size - 1)) }
+        val clamped = index.coerceIn(0, (_uiState.value.frames.size - 1).coerceAtLeast(0))
+        _uiState.update {
+            val frame = it.frames.getOrNull(clamped)
+            it.copy(
+                currentFrameIndex = clamped,
+                currentTileUrl = frame?.tileUrl,
+            )
+        }
+    }
+
+    fun setRadarOpacity(opacity: Float) {
+        _uiState.update { it.copy(radarOpacity = opacity.coerceIn(0f, 1f)) }
+    }
+
+    fun toggleAlertOverlay() {
+        _uiState.update { it.copy(showAlertOverlay = !it.showAlertOverlay) }
+    }
+
+    fun onCameraIdle(camera: CameraState) {
+        _uiState.update { it.copy(cameraState = camera) }
     }
 
     fun refresh() {
@@ -99,10 +166,12 @@ class RadarViewModel @Inject constructor(
                 val prefs = preferencesRepository.getPreferences()
                 val product = _uiState.value.selectedProduct.code
                 val frames = radarRepository.getFrames(stationId, product, prefs.loopFrameCount)
+                val lastIndex = (frames.size - 1).coerceAtLeast(0)
                 _uiState.update {
                     it.copy(
                         frames = frames,
-                        currentFrameIndex = frames.size - 1,
+                        currentFrameIndex = lastIndex,
+                        currentTileUrl = frames.getOrNull(lastIndex)?.tileUrl,
                         isLoading = false,
                         lastUpdated = frames.lastOrNull()?.timestamp?.toString(),
                     )
@@ -121,9 +190,15 @@ class RadarViewModel @Inject constructor(
                 val state = _uiState.value
                 if (state.frames.isEmpty()) break
                 val nextIndex = (state.currentFrameIndex + 1) % state.frames.size
-                _uiState.update { it.copy(currentFrameIndex = nextIndex) }
+                val frame = state.frames[nextIndex]
+                _uiState.update {
+                    it.copy(
+                        currentFrameIndex = nextIndex,
+                        currentTileUrl = frame.tileUrl,
+                    )
+                }
 
-                // Pause longer on the last frame
+                // Dwell longer on the last (most recent) frame
                 val delayMs = if (nextIndex == state.frames.size - 1) {
                     prefs.loopSpeedMs * 4
                 } else {

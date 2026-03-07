@@ -67,6 +67,7 @@ moshi-codegen = { module = "com.squareup.moshi:moshi-kotlin-codegen", version.re
 
 # MapLibre
 maplibre = { module = "org.maplibre.gl:android-sdk", version.ref = "maplibre" }
+maplibre-annotation = { module = "org.maplibre.gl:android-plugin-annotation-v9", version = "3.0.0" }
 
 # Android Auto
 car-app = { module = "androidx.car.app:app", version.ref = "car-app" }
