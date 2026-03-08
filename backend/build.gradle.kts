@@ -53,6 +53,7 @@ dependencies {
 
     // JSON
     implementation(libs.moshi)
+    implementation(libs.jackson.datatype.jsr310)
 
     // AWS S3 (object storage for radar tiles)
     implementation(libs.aws.s3)
@@ -63,5 +64,5 @@ dependencies {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }

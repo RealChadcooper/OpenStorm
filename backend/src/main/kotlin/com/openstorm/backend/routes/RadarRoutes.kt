@@ -12,9 +12,9 @@ fun Route.radarRoutes(radarService: RadarService) {
     route("/api/v1/radar") {
 
         get("/stations") {
-            val lat = call.parameters["lat"]?.toDoubleOrNull()
-            val lon = call.parameters["lon"]?.toDoubleOrNull()
-            val radius = call.parameters["radius"]?.toDoubleOrNull() ?: 200.0
+            val lat = call.request.queryParameters["lat"]?.toDoubleOrNull()
+            val lon = call.request.queryParameters["lon"]?.toDoubleOrNull()
+            val radius = call.request.queryParameters["radius"]?.toDoubleOrNull() ?: 200.0
 
             if (lat == null || lon == null) {
                 call.respond(HttpStatusCode.BadRequest, mapOf("error" to "lat and lon required"))
@@ -30,7 +30,7 @@ fun Route.radarRoutes(radarService: RadarService) {
                 ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "stationId required"))
             val product = call.parameters["product"]
                 ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "product required"))
-            val frameCount = call.parameters["frames"]?.toIntOrNull() ?: 10
+            val frameCount = call.request.queryParameters["frames"]?.toIntOrNull() ?: 10
 
             val frames = radarService.getFrames(stationId, product, frameCount)
             call.respond(RadarFramesResponse(station = stationId, product = product, frames = frames))

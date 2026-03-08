@@ -83,11 +83,18 @@ class RadarRepositoryImpl @Inject constructor(
 
     override suspend fun getAvailableProducts(stationId: String): List<String> {
         return try {
-            val response = api.getStations(0.0, 0.0, 10000.0)
-            response.stations.find { it.id == stationId }?.products ?: emptyList()
+            // Look up the station from the local cache first
+            val station = stationDao.getById(stationId)
+            if (station != null) {
+                // Use the station's own location to query nearby stations
+                val response = api.getStations(station.lat, station.lon, 50.0)
+                response.stations.find { it.id == stationId }?.products ?: DEFAULT_PRODUCTS
+            } else {
+                DEFAULT_PRODUCTS
+            }
         } catch (e: Exception) {
             Timber.e(e, "Failed to get products for $stationId")
-            emptyList()
+            DEFAULT_PRODUCTS
         }
     }
 
@@ -163,6 +170,7 @@ class RadarRepositoryImpl @Inject constructor(
 
     companion object {
         private const val EARTH_RADIUS_KM = 6371.0
+        private val DEFAULT_PRODUCTS = listOf("N0Q", "N0U")
 
         fun haversineKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
             val dLat = Math.toRadians(lat2 - lat1)

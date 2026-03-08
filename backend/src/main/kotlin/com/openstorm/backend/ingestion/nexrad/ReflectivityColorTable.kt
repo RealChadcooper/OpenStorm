@@ -17,38 +17,38 @@ object ReflectivityColorTable {
      */
     private val TABLE = arrayOf(
         // Below threshold — transparent
-        Entry(Float.NEGATIVE_INFINITY, -30f, 0x00000000),
+        Entry(Float.NEGATIVE_INFINITY, -30f, 0x00000000u.toInt()),
 
         // Very light returns (ND / noise)
-        Entry(-30f, -20f, 0x40646464),  // Gray, very transparent
-        Entry(-20f, -10f, 0x6004E9E7),  // Teal
+        Entry(-30f, -20f, 0x40646464u.toInt()),  // Gray, very transparent
+        Entry(-20f, -10f, 0x6004E9E7u.toInt()),  // Teal
 
         // Light precipitation
-        Entry(-10f, 0f, 0x8004E9E7),    // Teal
-        Entry(0f, 5f, 0xB001A4D4),      // Darker teal
-        Entry(5f, 10f, 0xC00187C5),     // Blue-teal
-        Entry(10f, 15f, 0xD003C78C),    // Green-teal
-        Entry(15f, 20f, 0xE002B502),    // Green
+        Entry(-10f, 0f, 0x8004E9E7u.toInt()),    // Teal
+        Entry(0f, 5f, 0xB001A4D4u.toInt()),      // Darker teal
+        Entry(5f, 10f, 0xC00187C5u.toInt()),     // Blue-teal
+        Entry(10f, 15f, 0xD003C78Cu.toInt()),    // Green-teal
+        Entry(15f, 20f, 0xE002B502u.toInt()),    // Green
 
         // Moderate precipitation
-        Entry(20f, 25f, 0xF001A501),     // Dark green
-        Entry(25f, 30f, 0xFFFEFA00),     // Yellow
-        Entry(30f, 35f, 0xFFEBB400),     // Gold
-        Entry(35f, 40f, 0xFFFF9600),     // Orange
+        Entry(20f, 25f, 0xF001A501u.toInt()),     // Dark green
+        Entry(25f, 30f, 0xFFFEFA00u.toInt()),     // Yellow
+        Entry(30f, 35f, 0xFFEBB400u.toInt()),     // Gold
+        Entry(35f, 40f, 0xFFFF9600u.toInt()),     // Orange
 
         // Heavy precipitation
-        Entry(40f, 45f, 0xFFFF0000),     // Red
-        Entry(45f, 50f, 0xFFD40000),     // Dark red
-        Entry(50f, 55f, 0xFFBE0000),     // Darker red
+        Entry(40f, 45f, 0xFFFF0000u.toInt()),     // Red
+        Entry(45f, 50f, 0xFFD40000u.toInt()),     // Dark red
+        Entry(50f, 55f, 0xFFBE0000u.toInt()),     // Darker red
 
         // Severe / hail
-        Entry(55f, 60f, 0xFFFE00FE),     // Magenta
-        Entry(60f, 65f, 0xFF9000A0),     // Purple
-        Entry(65f, 70f, 0xFFFFFFFF),     // White
-        Entry(70f, 75f, 0xFFE0E0FF),     // Light blue-white
+        Entry(55f, 60f, 0xFFFE00FEu.toInt()),     // Magenta
+        Entry(60f, 65f, 0xFF9000A0u.toInt()),     // Purple
+        Entry(65f, 70f, 0xFFFFFFFFu.toInt()),     // White
+        Entry(70f, 75f, 0xFFE0E0FFu.toInt()),     // Light blue-white
 
         // Extreme (EF5 debris, etc.)
-        Entry(75f, Float.POSITIVE_INFINITY, 0xFFC0C0FF), // Cyan-white
+        Entry(75f, Float.POSITIVE_INFINITY, 0xFFC0C0FFu.toInt()), // Cyan-white
     )
 
     /**

@@ -272,7 +272,7 @@ class RadarIngestionWorker(
             .ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")
             .withZone(ZoneOffset.UTC)
 
-        private const val FRAME_TTL_HOURS = 2L
+        private const val FRAME_TTL_HOURS = 24L
 
         // High-traffic stations always ingested when DB is unavailable
         val DEFAULT_PRIORITY_STATIONS = listOf(

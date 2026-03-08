@@ -8,6 +8,7 @@ postgres = "42.7.4"
 redis = "5.2.0"
 moshi = "1.15.1"
 aws = "2.29.26"
+jackson-jsr310 = "2.18.2"
 
 [libraries]
 ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
@@ -40,6 +41,8 @@ moshi = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshi" }
 # AWS S3
 aws-s3 = { module = "software.amazon.awssdk:s3", version.ref = "aws" }
 aws-s3-transfer = { module = "software.amazon.awssdk:s3-transfer-manager", version.ref = "aws" }
+
+jackson-datatype-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson-jsr310" }
 
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 

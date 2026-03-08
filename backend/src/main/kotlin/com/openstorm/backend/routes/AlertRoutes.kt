@@ -11,9 +11,9 @@ fun Route.alertRoutes(alertService: AlertService) {
     route("/api/v1/alerts") {
 
         get {
-            val lat = call.parameters["lat"]?.toDoubleOrNull()
-            val lon = call.parameters["lon"]?.toDoubleOrNull()
-            val radius = call.parameters["radius"]?.toDoubleOrNull() ?: 150.0
+            val lat = call.request.queryParameters["lat"]?.toDoubleOrNull()
+            val lon = call.request.queryParameters["lon"]?.toDoubleOrNull()
+            val radius = call.request.queryParameters["radius"]?.toDoubleOrNull() ?: 150.0
 
             if (lat == null || lon == null) {
                 call.respond(HttpStatusCode.BadRequest, mapOf("error" to "lat and lon required"))
