@@ -6,7 +6,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,9 +51,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -205,20 +209,27 @@ fun RadarScreen(
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
-                    .padding(32.dp),
+                    .shadow(16.dp, RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+                    .padding(horizontal = 40.dp, vertical = 32.dp),
             ) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(36.dp),
                     color = MaterialTheme.colorScheme.primary,
                     strokeWidth = 3.dp,
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Loading radar…",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    text = "Loading radar",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Fetching latest frames…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 )
             }
         }
@@ -486,10 +497,42 @@ private fun ArchivePlaybackBar(
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .shadow(12.dp, RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+            .border(
+                BorderStroke(0.5.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)),
+                RoundedCornerShape(18.dp),
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
+        // Info row
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(
+                imageVector = Icons.Default.History,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.tertiary,
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "Archive  ·  Frame ${currentFrame + 1}/$frameCount",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = frameTimestamp,
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
         // Frame scrubber
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -497,12 +540,18 @@ private fun ArchivePlaybackBar(
         ) {
             IconButton(
                 onClick = onTogglePlayback,
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isPlaying) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    ),
             ) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = MaterialTheme.colorScheme.tertiary,
                     modifier = Modifier.size(24.dp),
                 )
             }
@@ -513,41 +562,17 @@ private fun ArchivePlaybackBar(
                     onValueChange = { onSeek(it.toInt()) },
                     valueRange = 0f..(frameCount - 1).toFloat(),
                     steps = (frameCount - 2).coerceAtLeast(0),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 4.dp),
                     colors = SliderDefaults.colors(
                         thumbColor = MaterialTheme.colorScheme.tertiary,
                         activeTrackColor = MaterialTheme.colorScheme.tertiary,
-                        inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
                     ),
                 )
             }
 
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = frameTimestamp,
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-
-        // Info row
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Icon(
-                imageVector = Icons.Default.History,
-                contentDescription = null,
-                modifier = Modifier.size(14.dp),
-                tint = MaterialTheme.colorScheme.outline,
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = "Archive  ·  Frame ${currentFrame + 1}/$frameCount",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.weight(1f),
-            )
             TextButton(
                 onClick = onBackToLive,
                 colors = ButtonDefaults.textButtonColors(
@@ -577,25 +602,42 @@ private fun StationInfoBar(
 ) {
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.88f))
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .shadow(8.dp, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+            .border(
+                BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
+                RoundedCornerShape(16.dp),
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Colored accent dot indicating live status
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary),
+        )
+        Spacer(modifier = Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = stationId,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                    ),
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = stationName,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 )
             }
+            Spacer(modifier = Modifier.height(2.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = productName,
@@ -614,9 +656,9 @@ private fun StationInfoBar(
         if (alertCount > 0) {
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .background(MaterialTheme.colorScheme.error.copy(alpha = 0.15f))
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .padding(horizontal = 10.dp, vertical = 5.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -649,19 +691,35 @@ private fun ProductSelector(
         horizontalAlignment = Alignment.End,
     ) {
         RadarProduct.MVP.forEach { product ->
+            val isSelected = product.code == selectedProduct.code
             FilterChip(
-                selected = product.code == selectedProduct.code,
+                selected = isSelected,
                 onClick = { onProductSelected(product) },
                 label = {
                     Text(
                         text = product.code,
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp,
+                        ),
+                    )
+                },
+                shape = RoundedCornerShape(12.dp),
+                border = if (isSelected) {
+                    BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                } else {
+                    FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = false,
+                        borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
                     )
                 },
                 colors = FilterChipDefaults.filterChipColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                    selectedLabelColor = MaterialTheme.colorScheme.primary,
                 ),
+                modifier = Modifier.shadow(if (isSelected) 4.dp else 2.dp, RoundedCornerShape(12.dp)),
             )
         }
     }
@@ -678,11 +736,18 @@ private fun MapActionButton(
     IconButton(
         onClick = onClick,
         modifier = modifier
-            .size(40.dp)
+            .size(44.dp)
+            .shadow(4.dp, CircleShape)
             .clip(CircleShape)
             .background(
                 if (isActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                else MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                else MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+            )
+            .then(
+                if (isActive) Modifier.border(
+                    BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
+                    CircleShape,
+                ) else Modifier,
             ),
     ) {
         Icon(
@@ -710,10 +775,35 @@ private fun PlaybackControls(
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .shadow(12.dp, RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+            .border(
+                BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
+                RoundedCornerShape(18.dp),
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
+        // Frame info + timestamp row
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                text = "Frame ${currentFrame + 1}/$frameCount",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = frameTimestamp,
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
         // Frame scrubber row
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -721,7 +811,13 @@ private fun PlaybackControls(
         ) {
             IconButton(
                 onClick = onToggleLoop,
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isLooping) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    ),
             ) {
                 Icon(
                     imageVector = if (isLooping) Icons.Default.Pause else Icons.Default.PlayArrow,
@@ -737,22 +833,16 @@ private fun PlaybackControls(
                     onValueChange = { onSeek(it.toInt()) },
                     valueRange = 0f..(frameCount - 1).toFloat(),
                     steps = (frameCount - 2).coerceAtLeast(0),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 4.dp),
                     colors = SliderDefaults.colors(
                         thumbColor = MaterialTheme.colorScheme.primary,
                         activeTrackColor = MaterialTheme.colorScheme.primary,
-                        inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
                     ),
                 )
             }
-
-            Spacer(modifier = Modifier.width(4.dp))
-
-            Text(
-                text = frameTimestamp,
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
 
             IconButton(
                 onClick = onRefresh,
@@ -761,11 +851,13 @@ private fun PlaybackControls(
                 Icon(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = "Refresh radar",
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     modifier = Modifier.size(18.dp),
                 )
             }
         }
+
+        Spacer(modifier = Modifier.height(4.dp))
 
         // Opacity slider row
         Row(
@@ -794,7 +886,7 @@ private fun PlaybackControls(
                 colors = SliderDefaults.colors(
                     thumbColor = MaterialTheme.colorScheme.secondary,
                     activeTrackColor = MaterialTheme.colorScheme.secondary,
-                    inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                    inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
                 ),
             )
             Text(
