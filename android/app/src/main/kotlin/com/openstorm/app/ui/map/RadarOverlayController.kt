@@ -66,7 +66,7 @@ class RadarOverlayController {
         val layerA = RasterLayer(LAYER_A, SOURCE_A).apply {
             setProperties(
                 PropertyFactory.rasterOpacity(RADAR_OPACITY),
-                PropertyFactory.rasterFadeDuration(0),
+                PropertyFactory.rasterFadeDuration(0f),
                 PropertyFactory.rasterResampling("linear"),
             )
         }
@@ -75,7 +75,7 @@ class RadarOverlayController {
         val layerB = RasterLayer(LAYER_B, SOURCE_B).apply {
             setProperties(
                 PropertyFactory.rasterOpacity(0f),
-                PropertyFactory.rasterFadeDuration(0),
+                PropertyFactory.rasterFadeDuration(0f),
                 PropertyFactory.rasterResampling("linear"),
             )
         }
@@ -126,7 +126,7 @@ class RadarOverlayController {
         val newLayer = RasterLayer(nextLayerId, nextSourceId).apply {
             setProperties(
                 PropertyFactory.rasterOpacity(RADAR_OPACITY),
-                PropertyFactory.rasterFadeDuration(200),
+                PropertyFactory.rasterFadeDuration(200f),
                 PropertyFactory.rasterResampling("linear"),
             )
         }
