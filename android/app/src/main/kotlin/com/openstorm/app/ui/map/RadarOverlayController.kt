@@ -67,6 +67,7 @@ class RadarOverlayController {
             setProperties(
                 PropertyFactory.rasterOpacity(RADAR_OPACITY),
                 PropertyFactory.rasterFadeDuration(0),
+                PropertyFactory.rasterResampling("linear"),
             )
         }
 
@@ -75,6 +76,7 @@ class RadarOverlayController {
             setProperties(
                 PropertyFactory.rasterOpacity(0f),
                 PropertyFactory.rasterFadeDuration(0),
+                PropertyFactory.rasterResampling("linear"),
             )
         }
 
@@ -125,6 +127,7 @@ class RadarOverlayController {
             setProperties(
                 PropertyFactory.rasterOpacity(RADAR_OPACITY),
                 PropertyFactory.rasterFadeDuration(200),
+                PropertyFactory.rasterResampling("linear"),
             )
         }
         style.addLayer(newLayer)
