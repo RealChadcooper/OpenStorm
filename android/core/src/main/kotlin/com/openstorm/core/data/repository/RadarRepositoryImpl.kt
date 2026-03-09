@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.map
 import timber.log.Timber
 import java.time.Instant
 import javax.inject.Inject
+import javax.inject.Named
 import javax.inject.Singleton
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -24,6 +25,7 @@ import kotlin.math.sqrt
 class RadarRepositoryImpl @Inject constructor(
     private val api: OpenStormApi,
     private val stationDao: RadarStationDao,
+    @Named("apiBaseUrl") private val apiBaseUrl: String,
 ) : RadarRepository {
 
     override fun observeNearestStations(lat: Double, lon: Double, radiusKm: Double): Flow<List<RadarStation>> {
@@ -47,7 +49,7 @@ class RadarRepositoryImpl @Inject constructor(
                     stationId = response.station,
                     product = response.product,
                     timestamp = Instant.parse(dto.timestamp),
-                    tileUrl = dto.tileUrl,
+                    tileUrl = rewriteTileUrl(dto.tileUrl),
                     expiresAt = Instant.parse(dto.expiresAt),
                 )
             }
@@ -112,7 +114,7 @@ class RadarRepositoryImpl @Inject constructor(
             response.frames.map { dto ->
                 RadarFrameSummary(
                     timestamp = Instant.parse(dto.timestamp),
-                    tileUrl = dto.tileUrl,
+                    tileUrl = rewriteTileUrl(dto.tileUrl),
                 )
             }
         } catch (e: Exception) {
@@ -131,7 +133,7 @@ class RadarRepositoryImpl @Inject constructor(
             response.frame?.let {
                 RadarFrameSummary(
                     timestamp = Instant.parse(it.timestamp),
-                    tileUrl = it.tileUrl,
+                    tileUrl = rewriteTileUrl(it.tileUrl),
                 )
             }
         } catch (e: Exception) {
@@ -154,7 +156,7 @@ class RadarRepositoryImpl @Inject constructor(
                 frames = dto.frames.map { f ->
                     RadarFrameSummary(
                         timestamp = Instant.parse(f.timestamp),
-                        tileUrl = f.tileUrl,
+                        tileUrl = rewriteTileUrl(f.tileUrl),
                     )
                 },
                 startTime = Instant.parse(dto.startTime),
@@ -166,6 +168,18 @@ class RadarRepositoryImpl @Inject constructor(
             Timber.e(e, "Failed to fetch playback manifest")
             null
         }
+    }
+
+    /**
+     * Rewrite tile URLs from the backend so they are reachable from this device.
+     * In dev mode the backend returns URLs with "localhost" which is unreachable
+     * from the Android emulator/device. Replace with the configured API base URL.
+     */
+    private fun rewriteTileUrl(tileUrl: String): String {
+        // Match common localhost patterns the backend might return
+        val localhostPattern = Regex("^https?://localhost(:\\d+)?")
+        val match = localhostPattern.find(tileUrl) ?: return tileUrl
+        return tileUrl.replaceRange(match.range, apiBaseUrl)
     }
 
     companion object {

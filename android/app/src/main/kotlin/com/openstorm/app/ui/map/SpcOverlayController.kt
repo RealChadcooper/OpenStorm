@@ -1,12 +1,12 @@
 package com.openstorm.app.ui.map
 
-import android.graphics.Color
 import com.openstorm.core.domain.model.SpcOutlook
 import com.openstorm.core.domain.model.SpcRiskArea
 import com.openstorm.core.domain.model.SpcRiskLevel
 import com.openstorm.core.domain.model.SpcWatch
 import com.openstorm.core.domain.model.WatchType
 import org.maplibre.android.maps.Style
+import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.FillLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.PropertyFactory
@@ -45,12 +45,14 @@ class SpcOverlayController {
 
         style.addLayer(FillLayer(OUTLOOK_FILL_LAYER, OUTLOOK_SOURCE).apply {
             setProperties(
+                PropertyFactory.fillColor(Expression.toColor(Expression.get("fill"))),
                 PropertyFactory.fillOpacity(0.3f),
             )
         })
 
         style.addLayer(LineLayer(OUTLOOK_LINE_LAYER, OUTLOOK_SOURCE).apply {
             setProperties(
+                PropertyFactory.lineColor(Expression.toColor(Expression.get("stroke"))),
                 PropertyFactory.lineWidth(1.5f),
                 PropertyFactory.lineOpacity(0.6f),
             )
@@ -61,6 +63,7 @@ class SpcOverlayController {
 
         style.addLayer(LineLayer(WATCH_LINE_LAYER, WATCH_SOURCE).apply {
             setProperties(
+                PropertyFactory.lineColor(Expression.toColor(Expression.get("stroke"))),
                 PropertyFactory.lineWidth(3f),
                 PropertyFactory.lineOpacity(0.8f),
                 PropertyFactory.lineDasharray(arrayOf(4f, 3f)),

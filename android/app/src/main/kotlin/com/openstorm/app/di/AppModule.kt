@@ -32,6 +32,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import java.util.concurrent.TimeUnit
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Module
@@ -90,6 +91,10 @@ object AppModule {
         PreferenceDataStoreFactory.create {
             context.preferencesDataStoreFile("openstorm_prefs")
         }
+
+    @Provides
+    @Named("apiBaseUrl")
+    fun provideApiBaseUrl(): String = BuildConfig.API_BASE_URL
 }
 
 @Module
