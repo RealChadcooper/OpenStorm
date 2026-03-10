@@ -13,14 +13,15 @@ private val logger = LoggerFactory.getLogger("DevTileProxy")
 
 /**
  * DEV-MODE ONLY: Proxies radar tile requests to Iowa Environmental Mesonet (IEM)
- * which serves a live NEXRAD composite mosaic as slippy-map tiles.
+ * which serves NEXRAD radar data as slippy-map tiles.
  *
- * IEM tile URL pattern:
- *   https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/{layer}/{z}/{x}/{y}.png
+ * Two modes:
+ * 1. Per-station (Ridge): single-site radar data at full resolution
+ *    IEM URL: ridge::{STATION}-{PRODUCT}-0
+ *    Example: ridge::KICT-N0Q-0
  *
- * Supported layers:
- *   nexrad-n0q-900913  — Base Reflectivity (N0Q) composite
- *   nexrad-n0u-900913  — Base Velocity (N0U) composite
+ * 2. National composite (fallback): lower-res mosaic of all stations
+ *    IEM URL: nexrad-n0q-900913
  *
  * This endpoint is NOT registered in production.
  */
@@ -34,19 +35,16 @@ fun Route.devTileProxyRoutes() {
 
     route("/api/v1/dev/tiles") {
 
-        get("/{product}/{z}/{x}/{y}.png") {
-            val product = call.parameters["product"]?.lowercase() ?: "n0q"
+        // Per-station tiles: /api/v1/dev/tiles/{station}/{product}/{z}/{x}/{y}.png
+        get("/{station}/{product}/{z}/{x}/{y}.png") {
+            val station = call.parameters["station"]?.uppercase() ?: "KTLX"
+            val product = call.parameters["product"]?.uppercase() ?: "N0Q"
             val z = call.parameters["z"] ?: return@get call.respond(HttpStatusCode.BadRequest, "missing z")
             val x = call.parameters["x"] ?: return@get call.respond(HttpStatusCode.BadRequest, "missing x")
             val y = call.parameters["y"] ?: return@get call.respond(HttpStatusCode.BadRequest, "missing y")
 
-            val layer = when (product) {
-                "n0q" -> "nexrad-n0q-900913"
-                "n0u" -> "nexrad-n0u-900913"
-                "n0r" -> "nexrad-n0r-900913"
-                else -> "nexrad-n0q-900913"
-            }
-
+            // IEM Ridge single-site layer name: ridge::{STATION}-{PRODUCT}-0
+            val layer = "ridge::${station}-${product}-0"
             val upstreamUrl = "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/$layer/$z/$x/$y.png"
 
             try {

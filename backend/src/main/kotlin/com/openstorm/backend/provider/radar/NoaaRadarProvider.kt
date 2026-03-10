@@ -154,10 +154,9 @@ class NoaaRadarProvider(
         val now = Instant.now()
 
         if (devMode) {
-            // In dev mode, all frames point to the local tile proxy which serves
-            // live IEM NEXRAD mosaic tiles. The product controls which layer (N0Q/N0U).
-            val productLower = product.lowercase()
-            val tileUrl = "$localBaseUrl/api/v1/dev/tiles/$productLower/{z}/{x}/{y}.png"
+            // In dev mode, tile proxy serves per-station Ridge tiles from IEM
+            // giving single-site radar data at full resolution (like RadarScope).
+            val tileUrl = "$localBaseUrl/api/v1/dev/tiles/$stationId/$product/{z}/{x}/{y}.png"
             return (0 until count).reversed().map { i ->
                 val timestamp = now.minus((i * 5).toLong(), ChronoUnit.MINUTES)
                 RadarFrame(
